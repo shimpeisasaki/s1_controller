@@ -1,0 +1,19 @@
+s1_feedback_controller:
+  ros__parameters:
+    # X軸 (前後)
+    kp_x: 1.5
+    ki_x: 0.1
+    kd_x: 0.05
+    
+    # Y軸 (横移動)
+    kp_y: 1.5
+    ki_y: 0.1
+    kd_y: 0.05
+    
+    # Z軸 (回転)
+    kp_z: 1.0
+    ki_z: 0.05
+    kd_z: 0.01
+
+    # 積分リミット
+    integral_limit: 1.0
