@@ -1,13 +1,13 @@
 s1_feedback_controller:
   ros__parameters:
     # X軸 (前後)
-    kp_x: 1.5
-    ki_x: 0.1
+    kp_x: 0.8
+    ki_x: 0.05
     kd_x: 0.05
     
     # Y軸 (横移動)
-    kp_y: 1.5
-    ki_y: 0.1
+    kp_y: 0.8
+    ki_y: 0.05
     kd_y: 0.05
     
     # Z軸 (回転)

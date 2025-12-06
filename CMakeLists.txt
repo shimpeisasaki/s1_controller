@@ -37,6 +37,15 @@ install(DIRECTORY
   DESTINATION share/${PROJECT_NAME}
 )
 
+# 6. テストスクリプトのインストール
+install(PROGRAMS
+  test/response_test_x.py
+  test/response_test_y.py
+  test/response_test_z.py
+  test/mock_robot.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   set(ament_cmake_copyright_FOUND TRUE)
