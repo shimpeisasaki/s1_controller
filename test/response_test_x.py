@@ -24,7 +24,8 @@ class ResponseTestX(Node):
         
         # 結果保存用ディレクトリとファイル名の設定
         now_str = datetime.datetime.now().strftime('%m%d_%H%M')
-        self.result_dir = os.path.join(os.path.dirname(__file__), 'result')
+        # デスクトップのresponse_testフォルダに保存
+        self.result_dir = os.path.expanduser('~/Desktop/response_test')
         os.makedirs(self.result_dir, exist_ok=True)
         
         self.log_file = os.path.join(self.result_dir, f'response_test_x_{now_str}.csv')
