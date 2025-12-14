@@ -38,7 +38,6 @@ class ResponseTestX(Node):
         self.run_test_sequence()
 
     def odom_callback(self, msg):
-    def odom_callback(self, msg):
         self.current_odom_twist = msg.twist.twist
 
     def run_test_sequence(self):
