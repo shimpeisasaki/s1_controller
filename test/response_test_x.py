@@ -93,6 +93,11 @@ class ResponseTestX(Node):
 
     def save_log(self):
         with open(self.log_file, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(['Time', 'Cmd_X', 'Odom_X'])
+            writer.writerows(self.log_data)
+        self.get_logger().info(f'Data saved to {os.path.abspath(self.log_file)}')
+
     def plot_data(self):
         if not PLOT_AVAILABLE:
             self.get_logger().warn('Matplotlib is not available. Skipping plot generation.')
