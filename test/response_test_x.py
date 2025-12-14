@@ -8,6 +8,7 @@ import csv
 import os
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 
 class ResponseTestX(Node):
     def __init__(self):
@@ -30,13 +31,13 @@ class ResponseTestX(Node):
         
         self.log_file = os.path.join(self.result_dir, f'response_test_x_{now_str}.csv')
         self.plot_file = os.path.join(self.result_dir, f'response_test_x_{now_str}.png')
-
         self.target_vel = 0.5  # m/s
         self.duration = 3.0    # seconds
         
-        self.get_logger().info('Ready to run X-axis step response test.')
+        self.get_logger().info(f'Ready to run X-axis step response test. (Numpy: {np.__version__})')
         self.run_test_sequence()
 
+    def odom_callback(self, msg):
     def odom_callback(self, msg):
         self.current_odom_twist = msg.twist.twist
 
@@ -94,9 +95,15 @@ class ResponseTestX(Node):
         self.get_logger().info(f'Data saved to {os.path.abspath(self.log_file)}')
 
     def plot_data(self):
-        times = [row[0] for row in self.log_data]
-        cmds = [row[1] for row in self.log_data]
-        odoms = [row[2] for row in self.log_data]
+        # Numpy配列に変換
+        data = np.array(self.log_data)
+        if len(data) == 0:
+            self.get_logger().warn('No data to plot.')
+            return
+
+        times = data[:, 0]
+        cmds = data[:, 1]
+        odoms = data[:, 2]
 
         plt.figure(figsize=(10, 6))
         plt.plot(times, cmds, label='Command X (m/s)', linestyle='--')

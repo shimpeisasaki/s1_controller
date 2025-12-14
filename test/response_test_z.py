@@ -8,6 +8,7 @@ import csv
 import os
 import datetime
 import matplotlib.pyplot as plt
+import numpy as np
 
 class ResponseTestZ(Node):
     def __init__(self):
@@ -34,7 +35,7 @@ class ResponseTestZ(Node):
         self.target_vel = 1.0  # rad/s
         self.duration = 3.0    # seconds
         
-        self.get_logger().info('Ready to run Z-axis (Yaw) step response test.')
+        self.get_logger().info(f'Ready to run Z-axis (Yaw) step response test. (Numpy: {np.__version__})')
         self.run_test_sequence()
 
     def odom_callback(self, msg):
@@ -89,9 +90,15 @@ class ResponseTestZ(Node):
         self.get_logger().info(f'Data saved to {os.path.abspath(self.log_file)}')
 
     def plot_data(self):
-        times = [row[0] for row in self.log_data]
-        cmds = [row[1] for row in self.log_data]
-        odoms = [row[2] for row in self.log_data]
+        # Numpy配列に変換
+        data = np.array(self.log_data)
+        if len(data) == 0:
+            self.get_logger().warn('No data to plot.')
+            return
+
+        times = data[:, 0]
+        cmds = data[:, 1]
+        odoms = data[:, 2]
 
         plt.figure(figsize=(10, 6))
         plt.plot(times, cmds, label='Command Z (rad/s)', linestyle='--')
