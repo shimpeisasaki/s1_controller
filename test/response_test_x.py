@@ -7,7 +7,12 @@ import time
 import csv
 import os
 import datetime
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
+    PLOT_AVAILABLE = True
+except Exception as e:
+    print(f"Warning: Matplotlib could not be imported. Plotting will be disabled. Error: {e}")
+    PLOT_AVAILABLE = False
 import numpy as np
 
 class ResponseTestX(Node):
@@ -88,8 +93,12 @@ class ResponseTestX(Node):
 
     def save_log(self):
         with open(self.log_file, 'w', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow(['Time', 'Cmd_X', 'Odom_X'])
+    def plot_data(self):
+        if not PLOT_AVAILABLE:
+            self.get_logger().warn('Matplotlib is not available. Skipping plot generation.')
+            return
+
+        # Numpy配列に変換riterow(['Time', 'Cmd_X', 'Odom_X'])
             writer.writerows(self.log_data)
         self.get_logger().info(f'Data saved to {os.path.abspath(self.log_file)}')
 
