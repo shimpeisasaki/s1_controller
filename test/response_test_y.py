@@ -41,44 +41,47 @@ class ResponseTestY(Node):
         self.duration = 3.0    # seconds
         
         self.get_logger().info(f'Ready to run Y-axis step response test. (Numpy: {np.__version__})')
-        self.run_test_sequence()
+        
+        # タイマーで制御ループを回す (50Hz)
+        self.timer = self.create_timer(0.02, self.timer_callback)
+        self.start_time = None
 
     def odom_callback(self, msg):
         self.current_odom_twist = msg.twist.twist
 
-    def run_test_sequence(self):
-        self.get_logger().info(f'Starting Test: Y={self.target_vel} m/s for {self.duration} sec')
+    def timer_callback(self):
+        if self.start_time is None:
+            self.start_time = self.get_clock().now().nanoseconds / 1e9
+            self.get_logger().info(f'Starting Test: Y={self.target_vel} m/s for {self.duration} sec')
+            
+        now = self.get_clock().now().nanoseconds / 1e9
+        elapsed = now - self.start_time
         
-        self.send_velocity(0.0, 0.0, 0.0)
-        time.sleep(1.0)
+        cmd_y = 0.0
         
-        start_time = self.get_clock().now().nanoseconds / 1e9
-        end_time = start_time + self.duration
-        
-        try:
-            while rclpy.ok():
-                now = self.get_clock().now().nanoseconds / 1e9
-                elapsed = now - start_time
-                
-                if now < end_time:
-                    cmd_y = self.target_vel
-                    self.send_velocity(0.0, cmd_y, 0.0)
-                else:
-                    cmd_y = 0.0
-                    self.send_velocity(0.0, 0.0, 0.0)
-                    if now > end_time + 1.0:
-                        break
-                
-                self.log_data.append([elapsed, cmd_y, self.current_odom_twist.linear.y])
-                
-                rclpy.spin_once(self, timeout_sec=0.01)
-                time.sleep(0.01)
-        except KeyboardInterrupt:
-            pass
-        finally:
+        if elapsed < 1.0:
+            # 最初の1秒は待機
+            cmd_y = 0.0
+        elif elapsed < 1.0 + self.duration:
+            # ステップ入力
+            cmd_y = self.target_vel
+        elif elapsed < 1.0 + self.duration + 1.0:
+            # 終了後1秒記録
+            cmd_y = 0.0
+        else:
+            # 終了
             self.send_velocity(0.0, 0.0, 0.0)
             self.save_log()
             self.plot_data()
+            self.timer.cancel()
+            self.get_logger().info('Test Finished.')
+            raise SystemExit
+            return
+
+        self.send_velocity(0.0, cmd_y, 0.0)
+        
+        # ログ記録: [時間, 指令Y, 実測Y]
+        self.log_data.append([elapsed, cmd_y, self.current_odom_twist.linear.y])
 
     def send_velocity(self, x, y, w):
         msg = Twist()
@@ -123,8 +126,15 @@ class ResponseTestY(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ResponseTestY()
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except SystemExit:
+        pass
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

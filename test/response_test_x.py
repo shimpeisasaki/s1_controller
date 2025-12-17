@@ -40,49 +40,50 @@ class ResponseTestX(Node):
         self.duration = 3.0    # seconds
         
         self.get_logger().info(f'Ready to run X-axis step response test. (Numpy: {np.__version__})')
-        self.run_test_sequence()
+        
+        # タイマーで制御ループを回す (50Hz)
+        self.timer = self.create_timer(0.02, self.timer_callback)
+        self.start_time = None
+        self.state = 0 # 0: Init, 1: Run, 2: Post-Run, 3: Done
 
     def odom_callback(self, msg):
         self.current_odom_twist = msg.twist.twist
 
-    def run_test_sequence(self):
-        self.get_logger().info(f'Starting Test: X={self.target_vel} m/s for {self.duration} sec')
+    def timer_callback(self):
+        if self.start_time is None:
+            self.start_time = self.get_clock().now().nanoseconds / 1e9
+            self.get_logger().info(f'Starting Test: X={self.target_vel} m/s for {self.duration} sec')
+            
+        now = self.get_clock().now().nanoseconds / 1e9
+        elapsed = now - self.start_time
         
-        # 1. 停止状態で待機
-        self.send_velocity(0.0, 0.0, 0.0)
-        time.sleep(1.0)
+        cmd_x = 0.0
         
-        # 2. ステップ入力開始
-        start_time = self.get_clock().now().nanoseconds / 1e9
-        end_time = start_time + self.duration
-        
-        try:
-            while rclpy.ok():
-                now = self.get_clock().now().nanoseconds / 1e9
-                elapsed = now - start_time
-                
-                if now < end_time:
-                    # 移動中
-                    cmd_x = self.target_vel
-                    self.send_velocity(cmd_x, 0.0, 0.0)
-                else:
-                    # 時間終了 -> 停止
-                    cmd_x = 0.0
-                    self.send_velocity(0.0, 0.0, 0.0)
-                    if now > end_time + 1.0: # 1秒余分に記録して終了
-                        break
-                
-                # ログ記録: [時間, 指令X, 実測X]
-                self.log_data.append([elapsed, cmd_x, self.current_odom_twist.linear.x])
-                
-                rclpy.spin_once(self, timeout_sec=0.01)
-                time.sleep(0.01)
-        except KeyboardInterrupt:
-            pass
-        finally:
+        if elapsed < 1.0:
+            # 最初の1秒は待機
+            cmd_x = 0.0
+        elif elapsed < 1.0 + self.duration:
+            # ステップ入力
+            cmd_x = self.target_vel
+        elif elapsed < 1.0 + self.duration + 1.0:
+            # 終了後1秒記録
+            cmd_x = 0.0
+        else:
+            # 終了
             self.send_velocity(0.0, 0.0, 0.0)
             self.save_log()
             self.plot_data()
+            # ノードを終了させるためにSystemExitを投げるか、フラグを立てる
+            # ここではシンプルにタイマーを止めて終了ログを出す
+            self.timer.cancel()
+            self.get_logger().info('Test Finished.')
+            raise SystemExit
+            return
+
+        self.send_velocity(cmd_x, 0.0, 0.0)
+        
+        # ログ記録: [時間, 指令X, 実測X]
+        self.log_data.append([elapsed, cmd_x, self.current_odom_twist.linear.x])
 
     def send_velocity(self, x, y, w):
         msg = Twist()
@@ -103,11 +104,6 @@ class ResponseTestX(Node):
             self.get_logger().warn('Matplotlib is not available. Skipping plot generation.')
             return
 
-        # Numpy配列に変換riterow(['Time', 'Cmd_X', 'Odom_X'])
-            writer.writerows(self.log_data)
-        self.get_logger().info(f'Data saved to {os.path.abspath(self.log_file)}')
-
-    def plot_data(self):
         # Numpy配列に変換
         data = np.array(self.log_data)
         if len(data) == 0:
@@ -128,13 +124,19 @@ class ResponseTestX(Node):
         plt.grid(True)
         plt.savefig(self.plot_file)
         self.get_logger().info(f'Plot saved to {self.plot_file}')
-        # plt.show() # GUIがない環境も考慮して保存のみにするか、ユーザーが見れるならshowする。今回は保存のみ推奨。
 
 def main(args=None):
     rclpy.init(args=args)
     node = ResponseTestX()
-    node.destroy_node()
-    rclpy.shutdown()
+    try:
+        rclpy.spin(node)
+    except SystemExit:
+        pass
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
