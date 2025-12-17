@@ -36,7 +36,7 @@ class ResponseTestX(Node):
         
         self.log_file = os.path.join(self.result_dir, f'response_test_x_{now_str}.csv')
         self.plot_file = os.path.join(self.result_dir, f'response_test_x_{now_str}.png')
-        self.target_vel = 0.5  # m/s
+        self.target_vel = 0.2  # m/s
         self.duration = 3.0    # seconds
         
         self.get_logger().info(f'Ready to run X-axis step response test. (Numpy: {np.__version__})')
